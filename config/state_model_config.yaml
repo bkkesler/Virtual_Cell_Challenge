@@ -1,0 +1,64 @@
+# STATE Model Configuration for Virtual Cell Challenge
+
+model:
+  # Model architecture parameters
+  n_genes: 18080  # Number of genes in dataset
+  n_perturbations: 19792  # Number of unique perturbations
+  pert_emb_dim: 1280  # ESM2 embedding dimension (t33_650M model)
+  hidden_dim: 672  # Hidden dimension for transformer
+  n_layers: 4  # Number of transformer layers
+  n_heads: 8  # Number of attention heads
+  vocab_size: 32000  # Vocabulary size for transformer
+  cell_sentence_len: 128  # Maximum sequence length
+  dropout: 0.1  # Dropout rate
+
+  # Training parameters
+  learning_rate: 1e-4
+  weight_decay: 0.01
+
+data:
+  # Data loading parameters
+  batch_size: 32
+  num_workers: 4
+  pert_col: "target_gene"  # Column name for perturbation information
+  batch_col: "batch_var"  # Column name for batch information
+  control_name: "non-targeting"  # Name of control perturbation
+  transform_type: "log1p"  # Data transformation
+
+training:
+  # Training configuration
+  max_epochs: 10
+  max_steps: 400
+  accumulate_grad_batches: 1
+  val_check_interval: 1.0  # Validate every epoch
+  gradient_clip_val: 1.0
+
+  # Early stopping
+  early_stopping:
+    monitor: "val_loss"
+    min_delta: 0.001
+    patience: 5
+    mode: "min"
+
+  # Model checkpointing
+  checkpoint:
+    monitor: "val_loss"
+    mode: "min"
+    save_top_k: 3
+    save_last: true
+
+# ESM2 model configuration
+esm2:
+  model_name: "facebook/esm2_t33_650M_UR50D"  # ESM2 model for gene embeddings
+
+# Paths (can be overridden via command line)
+paths:
+  data_dir: "data/raw/single_cell_rnaseq/vcc_data"
+  output_dir: "outputs"
+  embeddings_dir: "data/processed/embeddings"
+
+# Logging
+logging:
+  log_every_n_steps: 50
+  enable_progress_bar: true
+  enable_model_summary: true

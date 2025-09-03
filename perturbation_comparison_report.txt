@@ -1,0 +1,31 @@
+PERTURBATION COMPARISON REPORT
+===================================
+
+SUBMISSION SUMMARY:
+
+v2_current:
+  Shape: (61751, 18080)
+  Perturbations: 51
+  Total cells: 61751
+
+v1_original:
+  Shape: (61751, 18080)
+  Perturbations: 51
+  Total cells: 61751
+
+differential:
+  Shape: (61751, 18080)
+  Perturbations: 51
+  Total cells: 61751
+
+cross_dataset:
+  Shape: (15571, 18080)
+  Perturbations: 51
+  Total cells: 15571
+
+vcc_expected:
+  Shape: N/A
+  Perturbations: 51
+  Total cells: N/A
+
+RECOMMENDATIONS:

@@ -1,0 +1,13 @@
+DATASET EXPLORATION REPORT FOR CONTROL CELL IDENTIFICATION
+======================================================================
+
+PURPOSE:
+Identify control/unperturbed cells across different datasets
+for baseline feature extraction in Random Forest models.
+
+DATASETS ANALYZED:
+------------------------------
+
+VCC_Training_Subset:
+  Shape: (5000, 18080)
+  Observation columns: 3

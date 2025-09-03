@@ -1,0 +1,5 @@
+Model_Name,Architecture,Embedding_Type,Embedding_Dim,Training_Data,Training_Approach,Model_Size,Score_Type,Overall_Score,DE_Score,Pert_Score,MAE_Score,Notes,Status,Date,Rank
+STATE Model (ESM2),Neural Network + ESM2,ESM2,1280D,Full VCC Training Set,Individual Cells,Large (~1.47GB),Official VCC Submission,0.007,0.0,0.525,0.824,Neural network approach - First submission,Submitted ✅,2025-01-28,N/A (Previous submission)
+Random Forest (ESM2) - SG-FTN3,Random Forest,ESM2,1280D,30K sampled cells,Pseudo-bulk profiles,Medium (~200MB),Official VCC Submission,0.05,0.22,0.53,0.04,BEST OVERALL PERFORMANCE! ESM2 + RF combination,Submitted ✅ - BEST MODEL,2025-07-28,97 of 250
+Random Forest (GO),Random Forest,GO Biological Process,128D,30K sampled cells,Pseudo-bulk profiles,Medium (~50MB),Custom Approximation,,0.15,,0.25,"GO annotations, reduced overfitting",Ready for submission,2025-01-27,Not submitted
+STATE Model (Failed runs),Neural Network,Various,Various,Various subsets,Individual Cells,Large,Training Only,,,,,"Multiple failed attempts, memory issues",Failed/Abandoned ❌,2025-01-20 to 2025-01-27,N/A

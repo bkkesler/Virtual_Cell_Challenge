@@ -1,0 +1,38 @@
+# Model Configuration
+
+state_model:
+  n_genes: 18080
+  pert_embed_dim: 5120  # ESM2 embedding dimension
+  hidden_dim: 672
+  num_layers: 4
+  dropout: 0.1
+
+random_forest:
+  n_estimators: 100
+  max_depth: 10
+  random_state: 42
+  n_jobs: -1
+
+neural_network:
+  hidden_layers: [512, 256, 128]
+  dropout: 0.2
+  learning_rate: 0.001
+  batch_size: 64
+  epochs: 100
+
+collaborative_filtering:
+  n_factors: 50
+  learning_rate: 0.01
+  regularization: 0.1
+  epochs: 100
+
+graph_neural_network:
+  hidden_dim: 64
+  num_layers: 3
+  dropout: 0.1
+  learning_rate: 0.001
+  batch_size: 32
+
+ensemble:
+  method: "weighted_average"
+  weights: [0.4, 0.2, 0.2, 0.1, 0.1]  # STATE, RF, NN, CF, GNN

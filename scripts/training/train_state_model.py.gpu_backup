@@ -1,0 +1,235 @@
+"""
+Training script for STATE model on Virtual Cell Challenge data
+"""
+
+import os
+import sys
+from pathlib import Path
+import argparse
+import yaml
+import torch
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.loggers import WandbLogger, CSVLogger
+import numpy as np
+
+# Add src to path
+sys.path.append(str(Path(__file__).parent.parent.parent / 'src'))
+
+from models.state_model.state_model import PertSetsPerturbationModel
+from data_processing.loaders.state_data_loader import VirtualCellDataModule, create_esm2_embeddings
+
+
+def load_config(config_path: str) -> dict:
+    """Load configuration from YAML file"""
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
+
+
+def create_perturbation_embeddings(
+        gene_names_path: str,
+        output_path: str,
+        model_name: str = "facebook/esm2_t33_650M_UR50D"
+) -> str:
+    """
+    Create and save perturbation embeddings using ESM2
+
+    Args:
+        gene_names_path: Path to CSV file with gene names
+        output_path: Path to save embeddings
+        model_name: ESM2 model name
+
+    Returns:
+        Path to saved embeddings
+    """
+    import pandas as pd
+
+    # Load gene names
+    if gene_names_path.endswith('.csv'):
+        gene_df = pd.read_csv(gene_names_path)
+        # Assume first column contains gene names
+        gene_names = gene_df.iloc[:, 0].tolist()
+    else:
+        raise ValueError("Gene names file must be CSV format")
+
+    print(f"Creating ESM2 embeddings for {len(gene_names)} genes...")
+
+    # Create embeddings
+    embeddings = create_esm2_embeddings(gene_names, model_name)
+
+    # Add control embedding
+    embeddings['non-targeting'] = np.zeros_like(list(embeddings.values())[0])
+
+    # Save embeddings
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    torch.save(embeddings, output_path)
+    print(f"Saved embeddings to {output_path}")
+
+    return str(output_path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Train STATE model")
+    parser.add_argument("--config", type=str, required=True, help="Path to config file")
+    parser.add_argument("--data-dir", type=str, default="data/raw/single_cell_rnaseq/vcc_data", help="Data directory")
+    parser.add_argument("--output-dir", type=str, default="outputs", help="Output directory")
+    parser.add_argument("--create-embeddings", action="store_true", help="Create ESM2 embeddings")
+    parser.add_argument("--embeddings-path", type=str, help="Path to save/load embeddings")
+    parser.add_argument("--gene-names-path", type=str, help="Path to gene names CSV")
+    parser.add_argument("--max-epochs", type=int, default=10, help="Maximum number of epochs")
+    parser.add_argument("--max-steps", type=int, default=400, help="Maximum number of steps")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
+    parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("--gpus", type=int, default=1, help="Number of GPUs")
+    parser.add_argument("--precision", type=str, default="16-mixed", help="Training precision")
+    parser.add_argument("--log-wandb", action="store_true", help="Log to Weights & Biases")
+    args = parser.parse_args()
+
+    # Load configuration
+    config = load_config(args.config)
+
+    # Override config with command line arguments
+    if 'model' not in config:
+        config['model'] = {}
+    if 'data' not in config:
+        config['data'] = {}
+    if 'training' not in config:
+        config['training'] = {}
+
+    config['training']['max_epochs'] = args.max_epochs
+    config['training']['max_steps'] = args.max_steps
+    config['data']['batch_size'] = args.batch_size
+    config['model']['learning_rate'] = args.learning_rate
+
+    # Setup paths
+    data_dir = Path(args.data_dir)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Training data path
+    train_data_path = data_dir / "adata_Training.h5ad"
+    if not train_data_path.exists():
+        raise FileNotFoundError(f"Training data not found: {train_data_path}")
+
+    # Gene names path
+    gene_names_path = Path(args.gene_names_path) if args.gene_names_path else data_dir / "gene_names.csv"
+    if not gene_names_path.exists():
+        raise FileNotFoundError(f"Gene names file not found: {gene_names_path}")
+
+    # Embeddings path
+    embeddings_path = Path(args.embeddings_path) if args.embeddings_path else output_dir / "embeddings" / "esm2_embeddings.pt"
+
+    # Create embeddings if requested or if they don't exist
+    if args.create_embeddings or not Path(embeddings_path).exists():
+        embeddings_path = create_perturbation_embeddings(
+            str(gene_names_path),
+            str(embeddings_path)
+        )
+
+    # Setup data module
+    data_module = VirtualCellDataModule(
+        train_data_path=str(train_data_path),
+        perturbation_embeddings_path=str(embeddings_path),
+        batch_size=config['data']['batch_size'],
+        num_workers=config['data'].get('num_workers', 4),
+        pert_col=config['data'].get('pert_col', 'target_gene'),
+        batch_col=config['data'].get('batch_col', 'batch_var')
+    )
+
+    # Setup model
+    model_config = config['model']
+    model = PertSetsPerturbationModel(
+        n_genes=model_config.get('n_genes', 18080),
+        n_perturbations=model_config.get('n_perturbations', 19792),
+        pert_emb_dim=model_config.get('pert_emb_dim', 5120),
+        hidden_dim=model_config.get('hidden_dim', 672),
+        n_layers=model_config.get('n_layers', 4),
+        n_heads=model_config.get('n_heads', 8),
+        vocab_size=model_config.get('vocab_size', 32000),
+        cell_sentence_len=model_config.get('cell_sentence_len', 128),
+        dropout=model_config.get('dropout', 0.1),
+        learning_rate=model_config['learning_rate'],
+        weight_decay=model_config.get('weight_decay', 0.01)
+    )
+
+    # Setup callbacks
+    callbacks = []
+
+    # Model checkpoint
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=output_dir / "checkpoints",
+        filename="state-{epoch:02d}-{val_loss:.3f}",
+        monitor="val_loss",
+        mode="min",
+        save_top_k=3,
+        save_last=True
+    )
+    callbacks.append(checkpoint_callback)
+
+    # Early stopping
+    early_stop_callback = EarlyStopping(
+        monitor="val_loss",
+        min_delta=0.001,
+        patience=5,
+        mode="min"
+    )
+    callbacks.append(early_stop_callback)
+
+    # Setup loggers
+    loggers = []
+
+    # CSV logger
+    csv_logger = CSVLogger(
+        save_dir=output_dir,
+        name="logs"
+    )
+    loggers.append(csv_logger)
+
+    # Weights & Biases logger
+    if args.log_wandb:
+        wandb_logger = WandbLogger(
+            project="virtual-cell-state",
+            name=f"state-model-{config['model'].get('hidden_dim', 672)}",
+            save_dir=output_dir
+        )
+        loggers.append(wandb_logger)
+
+    # Setup trainer
+    trainer = pl.Trainer(
+        max_epochs=config['training']['max_epochs'],
+        max_steps=config['training']['max_steps'],
+        devices=args.gpus,
+        accelerator="gpu" if args.gpus > 0 else "cpu",
+        precision=args.precision,
+        callbacks=callbacks,
+        logger=loggers,
+        gradient_clip_val=1.0,
+        accumulate_grad_batches=config['training'].get('accumulate_grad_batches', 1),
+        val_check_interval=config['training'].get('val_check_interval', 1.0),
+        log_every_n_steps=50,
+        enable_progress_bar=True,
+        enable_model_summary=True
+    )
+
+    # Train model
+    print("Starting training...")
+    trainer.fit(model, data_module)
+
+    # Save final model
+    final_model_path = output_dir / "final_model.ckpt"
+    trainer.save_checkpoint(final_model_path)
+    print(f"Saved final model to {final_model_path}")
+
+    # Save configuration
+    config_save_path = output_dir / "config.yaml"
+    with open(config_save_path, 'w') as f:
+        yaml.dump(config, f)
+    print(f"Saved configuration to {config_save_path}")
+
+    print("Training completed!")
+
+
+if __name__ == "__main__":
+    main()

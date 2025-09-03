@@ -1,0 +1,94 @@
+# Large data files and model outputs
+data/
+!data/*/.gitkeep
+models/
+!models/.gitkeep
+outputs/
+!outputs/.gitkeep
+temp/
+!temp/.gitkeep
+logs/
+!logs/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Large files
+*.h5ad
+*.vcc
+*.h5
+*.hdf5
+*.pt
+
+# Wandb
+wandb/
+
+# Additional large data directories not covered by data/
+control_cell_features/
+multi_format_control_features/
+median_nonzero_features/
+standardized_datasets/
+standardized_normalization_results/
+gene_mappings/
+embedding_visualizations/
+perturbation_analysis_results/
+refined_perturbation_analysis/
+cross_dataset_evaluation_results/
+
+# Model and submission directories with large files
+saved_*/
+vcc_*_submission/
+perturbseq_dc_tap/
+
+# Large individual files that might be in unexpected places
+*.joblib
+*.pkl
+*.npy
+*.ckpt
+
+# PyTorch Lightning checkpoints and logs
+lightning_logs/
+checkpoints/
+
+# Additional virtual environment patterns
+.env
+.conda/

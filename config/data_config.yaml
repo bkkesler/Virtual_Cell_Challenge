@@ -1,0 +1,41 @@
+# Data Configuration
+
+paths:
+  raw_data: "data/raw"
+  processed_data: "data/processed"
+  single_cell_data: "data/raw/single_cell_rnaseq"
+  go_terms: "data/raw/go_terms"
+  gene_annotations: "data/raw/gene_annotations"
+
+  # Output paths
+  predictions: "outputs/predictions"
+  h5ad_output: "outputs/h5ad_files"
+  vcc_output: "outputs/vcc_files"
+
+# Virtual Cell Challenge datasets
+competition_datasets:
+  train: "data/raw/single_cell_rnaseq/competition_train.h5ad"
+  val: "data/raw/single_cell_rnaseq/competition_val_template.h5ad"
+
+# Replogle support datasets for STATE training  
+replogle_datasets:
+  k562_gwps: "data/raw/single_cell_rnaseq/k562_gwps.h5"
+  rpe1: "data/raw/single_cell_rnaseq/rpe1.h5"
+  jurkat: "data/raw/single_cell_rnaseq/jurkat.h5"
+  k562: "data/raw/single_cell_rnaseq/k562.h5"
+  hepg2: "data/raw/single_cell_rnaseq/hepg2.h5"
+
+preprocessing:
+  min_cells: 3
+  min_genes: 200
+  max_genes: 5000
+  mt_threshold: 20
+  normalize: true
+  log_transform: true
+  scale: false
+  target_sum: 10000
+
+embeddings:
+  gene_embedding_dim: 128
+  cell_embedding_dim: 64
+  go_embedding_dim: 50
